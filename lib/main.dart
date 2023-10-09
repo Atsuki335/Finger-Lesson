@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 // ゲームの主要なウィジェットの定義
 // UIの構築
 //丸を描画するカスタムペインターの定義
+//再描画の制御
 
 void main() => runApp(MyApp());
 
@@ -14,8 +15,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Random Circles Game',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      title: 'タッチするゲーム',
+      theme: ThemeData(primarySwatch: Colors.blueGrey),
       home: RandomCircles(),
     );
   }
@@ -43,16 +44,21 @@ class _RandomCirclesState extends State<RandomCircles> {
 
 //ランダムな位置を生成して丸を表示するための座標をリストに追加
   _generateRandomCircles() {
+    double containerWidth = 300.0; // Containerの幅
+    double containerHeight = 600.0; // Containerの高さ
+    double circleRadius = 50.0; // 丸の半径
     _circles.clear();
     for (int i = 0; i < 4; i++) {
       Offset position;
       do {
-        //四角の幅と高さ
-        double x = _random.nextDouble() * 250; // 50のマージンを追加して被りを防ぐ
-        double y = _random.nextDouble() * 550; //こっちも
+        //丸がContainer内に収まるように調整
+        double x = circleRadius +
+            _random.nextDouble() * (containerWidth - 2 * circleRadius);
+        double y = circleRadius +
+            _random.nextDouble() * (containerHeight - 2 * circleRadius);
         position = Offset(x, y);
-      } while (
-          _circles.any((circle) => (circle.position - position).distance < 50));
+      } while (_circles.any((circle) =>
+          (circle.position - position).distance < 2 * circleRadius));
       _circles.add(CircleData(position, ' ${i + 1}'));
     }
     setState(() {});
@@ -63,14 +69,28 @@ class _RandomCirclesState extends State<RandomCircles> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Random Circles Game')),
+      appBar: PreferredSize(
+          preferredSize: Size.fromHeight(80),
+          child: AppBar(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(' 鍛えたい指で押してね',
+                    style: TextStyle(fontFamily: 'にくまる', fontSize: 25)),
+                Icon(
+                  Icons.touch_app,
+                  size: 45,
+                ),
+              ],
+            ),
+          )),
       body: Center(
         //タップに反応するウィジェット
         child: GestureDetector(
           onTapDown: (details) {
             for (int i = 0; i < _circles.length; i++) {
               if ((details.localPosition - _circles[i].position).distance <
-                  25) {
+                  50) {
                 setState(() {
                   _circles.removeAt(i);
                 });
@@ -82,8 +102,8 @@ class _RandomCirclesState extends State<RandomCircles> {
             }
           },
           child: Container(
-            width: 300,
-            height: 600,
+            width: 400,
+            height: 700,
             color: Colors.grey[200],
             child: CustomPaint(
               painter: CirclePainter(_circles),
@@ -103,20 +123,24 @@ class CirclePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final circlePaint = Paint()..color = Colors.blue;
+    final circlePaint = Paint()..color = Color.fromARGB(255, 122, 189, 244);
     final textPainter = TextPainter(
         textAlign: TextAlign.center, textDirection: TextDirection.ltr);
 
     for (var circle in circles) {
-      canvas.drawCircle(circle.position, 25, circlePaint);
+      canvas.drawCircle(circle.position, 50, circlePaint);
       textPainter.text = TextSpan(
           text: circle.label,
-          style: TextStyle(color: Colors.white, fontSize: 14));
+          style:
+              TextStyle(color: Colors.white, fontSize: 45, fontFamily: 'にくまる'));
       textPainter.layout();
-      textPainter.paint(
-          canvas,
-          circle.position -
-              Offset(textPainter.width / 2, textPainter.height / 2));
+      final offset = circle.position -
+          Offset(textPainter.width * 0.7, textPainter.height * 0.5);
+
+      textPainter.paint(canvas, offset
+          // circle.position -
+          //     Offset(textPainter.width / 2, textPainter.height / 2)
+          );
     }
   }
 
@@ -127,6 +151,7 @@ class CirclePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
+//丸のデータを保持する
 class CircleData {
   final Offset position;
   final String label;
